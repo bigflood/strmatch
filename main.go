@@ -2,14 +2,19 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"regexp"
+	"strings"
 )
 
 func main() {
-	args := os.Args[1:]
+	sep := flag.String("sep", "\n", "separator")
+	flag.Parse()
+
+	args := flag.Args()
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "usage: strmatch regexp [regexp ...]")
 		os.Exit(2)
@@ -19,7 +24,7 @@ func main() {
 
 	output := readLines(os.Stdin, errCh)
 	output = filterLines(output, errCh, args)
-	printLines(output, errCh)
+	printLines(output, errCh, []byte(*sep))
 
 	err := <-errCh
 	if err != nil {
@@ -28,10 +33,15 @@ func main() {
 	}
 }
 
-func printLines(input chan string, errCh chan error) {
+func printLines(input chan string, errCh chan error, sep []byte) {
 	go func() {
 		defer func() { errCh <- nil }()
+		count := 0
 		for s := range input {
+			if count > 0 {
+				os.Stdout.Write(sep)
+			}
+			count++
 			os.Stdout.Write([]byte(s))
 		}
 	}()
@@ -55,6 +65,7 @@ func filterLines(input chan string, errCh chan error, args []string) chan string
 		defer close(output)
 
 		for s := range input {
+			s = strings.TrimRight(s, "\r\n")
 			for _, re := range reList {
 				if groups := re.FindStringSubmatch(s); len(groups) > 0 {
 					if len(groups) > 1 {
@@ -62,7 +73,6 @@ func filterLines(input chan string, errCh chan error, args []string) chan string
 					}
 					for _, g := range groups {
 						output <- g
-						output <- "\n"
 					}
 					break
 				}
