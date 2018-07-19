@@ -1,6 +1,11 @@
 # strmatch
 search for regexp in stdin
 
+#### install
+```bash
+$ go get -u github.com/bigflood/strmatch
+```
+
 #### usage example
 
 ```bash
